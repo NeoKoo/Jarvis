@@ -111,6 +111,40 @@ npm run build
 npm start
 ```
 
+### Run Pre-Deployment Check
+
+Before deploying, run the verification script:
+```bash
+./scripts/check-deployment.sh
+```
+
+## 🚀 Deployment
+
+### Zeabur Deployment (Recommended)
+
+Quick start guide available: [ZEABUR_QUICKSTART.md](./ZEABUR_QUICKSTART.md)
+
+**Quick Steps**:
+1. Run `./scripts/check-deployment.sh` to verify repository status
+2. Go to [Zeabur Dashboard](https://dash.zeabur.com)
+3. Import from Git → GitHub → `NeoKoo/Jarvis`
+4. Select `main` branch
+5. Configure build settings:
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+   - Node.js Version: `20.x`
+6. Add environment variables (see `.env.local.example`)
+7. Deploy! 🚀
+
+**Note**: If you encounter "No Branches Found" error, see [ZEABUR_DEPLOYMENT.md](./ZEABUR_DEPLOYMENT.md) for troubleshooting.
+
+**Deployment Files**:
+- `Dockerfile` - Optimized container configuration
+- `next.config.js` - Standalone output for Docker
+- `.dockerignore` - Optimized build context
+- `ZEABUR_DEPLOYMENT.md` - Full deployment guide
+- `scripts/check-deployment.sh` - Pre-deployment verification
+
 ## Project Structure
 
 ```
