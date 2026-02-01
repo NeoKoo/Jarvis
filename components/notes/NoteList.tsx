@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNoteStore } from '@/stores/note-store';
-import { Plus, Search, FileText, Tag, Clock, Trash2, Edit2, X } from 'lucide-react';
+import { Plus, Search, FileText, Tag, Clock, Trash2, Edit2, X, Download } from 'lucide-react';
 import { Note } from '@/types';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { exportNoteAsMarkdown, exportNotesAsMarkdown, copyToClipboard } from '@/lib/utils/note-export';
+import { useToast } from '@/hooks/use-toast';
 
 export function NoteList() {
   const {
@@ -24,6 +26,8 @@ export function NoteList() {
     setSearchQuery,
   } = useNoteStore();
 
+  const { toast } = useToast();
+
   const [showForm, setShowForm] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [formData, setFormData] = useState({
@@ -35,6 +39,37 @@ export function NoteList() {
   useEffect(() => {
     loadNotes();
   }, []);
+
+  const handleExportSingle = async () => {
+    if (!selectedNote) return;
+
+    const markdown = exportNoteAsMarkdown(selectedNote);
+    const success = await copyToClipboard(markdown);
+
+    if (success) {
+      toast.success('已复制到剪贴板');
+    } else {
+      toast.error('复制失败，请重试');
+    }
+  };
+
+  const handleExportAll = async () => {
+    const notes = filteredNotes();
+
+    if (notes.length === 0) {
+      toast.info('暂无笔记可导出');
+      return;
+    }
+
+    const markdown = exportNotesAsMarkdown(notes);
+    const success = await copyToClipboard(markdown);
+
+    if (success) {
+      toast.success(`已导出 ${notes.length} 条笔记到剪贴板`);
+    } else {
+      toast.error('复制失败，请重试');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,15 +122,26 @@ export function NoteList() {
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-3xl font-bold">笔记</h1>
           <p className="text-muted-foreground">快速记录和知识库</p>
         </div>
-        <Button onClick={() => setShowForm(true)} size="lg">
-          <Plus className="h-5 w-5 mr-2" />
-          新建笔记
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportAll}
+            variant="outline"
+            size="lg"
+            disabled={notes.length === 0}
+          >
+            <Download className="h-5 w-5 mr-2" />
+            导出全部
+          </Button>
+          <Button onClick={() => setShowForm(true)} size="lg">
+            <Plus className="h-5 w-5 mr-2" />
+            新建笔记
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -278,7 +324,19 @@ export function NoteList() {
         {selectedNote && !showForm && (
           <Card className="md:col-span-1">
             <CardHeader>
-              <CardTitle className="line-clamp-2">{selectedNote.title}</CardTitle>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="line-clamp-2 flex-1">
+                  {selectedNote.title}
+                </CardTitle>
+                <Button
+                  onClick={handleExportSingle}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  导出
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="prose prose-sm max-w-none mb-4 whitespace-pre-wrap">
