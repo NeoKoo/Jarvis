@@ -1,0 +1,18 @@
+# Zeabur Configuration for Jarvis (Next.js PWA)
+# This configuration tells Zeabur how to build and deploy the Next.js application
+
+# Application name
+name: jarvis
+
+# Services configuration
+services:
+  - type: prebuilt
+    name: jarvis-web
+    # Zeabur will automatically detect Next.js and configure it
+    # Build settings
+    buildCommand: npm run build
+    # Next.js will output to .next directory by default
+    outputDirectory: .next
+    # Start command
+    startCommand: npm start
+
