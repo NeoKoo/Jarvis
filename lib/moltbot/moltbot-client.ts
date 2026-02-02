@@ -29,10 +29,11 @@ export class MoltbotClient {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private messageHandlers: Array<(event: ChatEvent) => void> = [];
-  private statusHandlers: Array<(status: 'connected' | 'disconnected' | 'connecting' | 'error')> void> = [];
+  private statusHandlers: Array<(status: 'connected' | 'disconnected' | 'connecting' | 'error') => void> = [];
   private historyHandlers: Array<(messages: MoltbotMessage[]) => void> = [];
   private pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
   private connectResolve: Function | null = null;
+  private connectReject: Function | null = null;
 
   constructor(config: MoltbotConfig) {
     this.config = {
@@ -69,7 +70,7 @@ export class MoltbotClient {
       this.ws.onerror = (error) => {
         console.error('[Moltbot] WebSocket error:', error);
         this.notifyStatus('error');
-        if (this.connectResolve) {
+        if (this.connectReject) {
           this.connectReject(error);
         }
       };
@@ -308,7 +309,7 @@ export class MoltbotClient {
   /**
    * Register status change handler
    */
-  onStatus(handler: (status: 'connected' | 'disconnected' | 'connecting' | 'error') void) {
+  onStatus(handler: (status: 'connected' | 'disconnected' | 'connecting' | 'error') => void) {
     this.statusHandlers.push(handler);
   }
 
