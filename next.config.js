@@ -13,6 +13,9 @@ const nextConfig = {
   // Strict mode for better error detection
   reactStrictMode: true,
 
+  // Output mode for Docker deployment
+  output: 'standalone',
+
   // Image optimization (works with Next.js 15)
   images: {
     formats: ['image/avif', 'image/webp'],
