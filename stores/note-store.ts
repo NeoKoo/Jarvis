@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Note } from '@/types';
 import { dbHelpers } from '@/lib/db/schema';
+import { useSyncStore } from '@/stores/sync-store';
 
 interface NoteStore {
   notes: Note[];
@@ -50,6 +51,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     set(state => ({
       notes: [newNote, ...state.notes],
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncNotes(get().notes).catch(console.error);
+    }
   },
 
   updateNote: async (id, updates) => {
@@ -68,6 +75,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         ? { ...state.selectedNote, ...updatedNote }
         : state.selectedNote,
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncNotes(get().notes).catch(console.error);
+    }
   },
 
   deleteNote: async (id) => {
@@ -77,6 +90,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       notes: state.notes.filter(note => note.id !== id),
       selectedNote: state.selectedNote?.id === id ? null : state.selectedNote,
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncNotes(get().notes).catch(console.error);
+    }
   },
 
   setSelectedNote: (note) => {

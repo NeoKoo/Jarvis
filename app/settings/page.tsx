@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/navbar';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { GitHubSyncSettings } from '@/components/sync/GitHubSyncSettings';
 import { Download, Upload, Trash2, Key, Palette, Database, Bell } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -227,6 +228,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* GitHub Sync */}
+          <GitHubSyncSettings />
 
           {/* Data Management */}
           <Card>

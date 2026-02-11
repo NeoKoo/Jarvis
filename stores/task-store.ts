@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Task } from '@/types';
 import { dbHelpers } from '@/lib/db/schema';
+import { useSyncStore } from '@/stores/sync-store';
 
 interface TaskStore {
   tasks: Task[];
@@ -53,6 +54,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set(state => ({
       tasks: [...state.tasks, newTask],
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncTasks(get().tasks).catch(console.error);
+    }
   },
 
   updateTask: async (id, updates) => {
@@ -68,6 +75,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         task.id === id ? { ...task, ...updatedTask } : task
       ),
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncTasks(get().tasks).catch(console.error);
+    }
   },
 
   deleteTask: async (id) => {
@@ -76,6 +89,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set(state => ({
       tasks: state.tasks.filter(task => task.id !== id),
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncTasks(get().tasks).catch(console.error);
+    }
   },
 
   toggleTaskStatus: async (id) => {
@@ -103,6 +122,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         t.id === id ? updatedTask : t
       ),
     }));
+
+    // Auto sync to GitHub if enabled
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.autoSync && syncStore.config) {
+      syncStore.syncTasks(get().tasks).catch(console.error);
+    }
   },
 
   setFilter: (filter) => {
