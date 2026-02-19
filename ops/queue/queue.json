@@ -1,0 +1,62 @@
+{
+  "schema_version": 3,
+  "tasks": [],
+  "maintenance_conditions": [
+    {
+      "condition_key": "inbox_pressure",
+      "type": "maintenance",
+      "priority": "session",
+      "description": "捕获区 has items older than 3 days",
+      "threshold": {"max_age_days": 3},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "orphan_notes",
+      "type": "maintenance",
+      "priority": "session",
+      "description": "技术笔记 with no incoming links detected",
+      "threshold": {"max_orphans": 0},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "dangling_links",
+      "type": "maintenance",
+      "priority": "session",
+      "description": "Wiki links pointing to non-existent files",
+      "threshold": {"max_dangling": 0},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "observation_accumulation",
+      "type": "maintenance",
+      "priority": "multi_session",
+      "description": "Pending observations exceeding threshold",
+      "threshold": {"max_pending": 10},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "tension_accumulation",
+      "type": "maintenance",
+      "priority": "multi_session",
+      "description": "Pending tensions exceeding threshold",
+      "threshold": {"max_pending": 5},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "moc_oversize",
+      "type": "maintenance",
+      "priority": "slow",
+      "description": "主题 exceeds 40 技术笔记",
+      "threshold": {"max_notes_per_moc": 40},
+      "status": "monitoring"
+    },
+    {
+      "condition_key": "schema_violations",
+      "type": "maintenance",
+      "priority": "session",
+      "description": "技术笔记 missing required schema fields",
+      "threshold": {"max_violations": 0},
+      "status": "monitoring"
+    }
+  ]
+}
