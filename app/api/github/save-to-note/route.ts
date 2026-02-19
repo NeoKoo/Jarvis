@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       if (readmeResponse.ok) {
         const readmeData = await readmeResponse.json();
         // README content is base64 encoded
-        readmeContent = Buffer.from(readmeData.content, 'base64').decode('utf-8');
+        readmeContent = Buffer.from(readmeData.content, 'base64').toString('utf-8');
       }
     } catch (error) {
       console.error('Error fetching README:', error);

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MessageSquare, Calendar, CheckSquare, Mic, BookOpen, Bell } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { GitHubTrending } from '@/components/github/GitHubTrending';
+import { DailyDigest } from '@/components/daily-digest/DailyDigest';
 
 export default function Home() {
   const [time, setTime] = useState(new Date());
@@ -113,6 +114,13 @@ export default function Home() {
             );
           })}
         </div>
+
+        {/* 每日技术摘要 */}
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-6">
+            <DailyDigest />
+          </CardContent>
+        </Card>
 
         {/* GitHub 热门仓库 */}
         <Card className="backdrop-blur-sm bg-card/50">
