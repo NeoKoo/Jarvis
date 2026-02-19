@@ -9,7 +9,11 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
+    "verify": "./scripts/verify-build.sh",
+    "test:docker": "./scripts/test-docker-build.sh",
+    "precommit": "npm run lint && npm run type-check && npm run build && npm test"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
