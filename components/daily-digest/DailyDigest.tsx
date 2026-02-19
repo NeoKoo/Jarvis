@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 
 interface Article {
   title: string;
@@ -103,7 +102,7 @@ export function DailyDigest() {
           <h2 className="text-xl font-bold">每日技术摘要</h2>
           {digest.generatedAt && (
             <span className="text-sm text-muted-foreground">
-              更新于 {format(new Date(digest.generatedAt), 'HH:mm', { locale: zhCN })}
+              更新于 {format(new Date(digest.generatedAt), 'HH:mm')}
             </span>
           )}
         </div>

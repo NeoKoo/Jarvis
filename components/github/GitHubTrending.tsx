@@ -34,20 +34,13 @@ function RepositoryCard({ repository }: { repository: GitHubRepository }) {
 
       if (data.success) {
         setIsSaved(true);
-        toast({
-          title: '保存成功',
-          description: '已将仓库信息保存到笔记知识库',
-        });
+        toast.success('已将仓库信息保存到笔记知识库');
       } else {
         throw new Error(data.error || '保存失败');
       }
     } catch (error) {
       console.error('Error saving to note:', error);
-      toast({
-        variant: 'destructive',
-        title: '保存失败',
-        description: error instanceof Error ? error.message : '未知错误',
-      });
+      toast.error(error instanceof Error ? error.message : '未知错误');
     } finally {
       setIsSaving(false);
     }
