@@ -39,12 +39,19 @@ export class QwenClient {
    * Convert our Message format to Qwen format
    */
   private convertMessages(messages: Message[]): QwenMessage[] {
-    return messages
-      .filter(msg => msg.role !== 'system' || msg.content.trim() !== '')
+    const converted = messages
+      .filter(msg => msg.content.trim() !== '')  // Only filter out empty messages
       .map(msg => ({
-        role: msg.role,
+        role: msg.role as 'system' | 'user' | 'assistant',
         content: msg.content,
       }));
+
+    // Ensure we always have at least one message
+    if (converted.length === 0) {
+      throw new Error('No valid messages to send to API');
+    }
+
+    return converted;
   }
 
   /**
