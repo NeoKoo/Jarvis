@@ -151,7 +151,32 @@ ${articlesText}
       },
     ];
 
-    const result = await qwenClient.chat(messages);
+    let result;
+    try {
+      // Call with timeout and limited retries for faster response
+      result = await qwenClient.chat(messages, { timeout: 20000, retries: 1 });
+    } catch (error) {
+      console.error('Qwen API failed, using fallback:', error instanceof Error ? error.message : error);
+
+      // Fallback response when API fails
+      return NextResponse.json({
+        success: true,
+        digest: {
+          summary: `今日精选 ${topArticles.slice(0, 5).length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
+          trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
+          articles: topArticles.slice(0, 5).map(article => ({
+            title: article.title,
+            link: article.link,
+            source: article.source,
+            category: article.category,
+            pubDate: article.pubDate.toISOString(),
+            description: article.description,
+            reason: '推荐阅读',
+          })),
+          generatedAt: new Date().toISOString(),
+        },
+      });
+    }
 
     // Parse AI response
     let aiResponse;

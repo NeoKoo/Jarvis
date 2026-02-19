@@ -103,7 +103,44 @@ ${repository.url}
       },
     ];
 
-    const result = await qwenClient.chat(messages);
+    let result;
+    try {
+      // Call with timeout for better error handling
+      result = await qwenClient.chat(messages, { timeout: 30000, retries: 1 });
+    } catch (error) {
+      console.error('Qwen API failed for GitHub repository:', error instanceof Error ? error.message : error);
+
+      // Fall back to basic note without AI enhancement
+      const basicNote = {
+        title: `${repository.fullName} - GitHub 仓库笔记`,
+        content: `# ${repository.fullName}
+
+**描述：** ${repository.description}
+**语言：** ${repository.language}
+**星标数：** ${repository.stars.toLocaleString()}
+**链接：** ${repository.url}
+
+${readmeContent ? `## README\n${readmeContent.substring(0, 5000)}\n\n...\n*（README 已截断）*` : ''}
+
+---
+*由系统自动生成于 ${new Date().toLocaleString('zh-CN')}*`,
+        tags: ['github', '开源', repository.language.toLowerCase(), repository.fullName.split('/')[1]],
+        isAiGenerated: false,
+      };
+
+      await dbHelpers.saveNote({
+        id: crypto.randomUUID(),
+        ...basicNote,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        note: basicNote,
+        fallback: true,
+      });
+    }
 
     // 3. Save to notes database
     const note = {

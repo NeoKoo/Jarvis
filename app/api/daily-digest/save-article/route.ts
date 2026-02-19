@@ -123,7 +123,47 @@ ${article.reason}
       },
     ];
 
-    const result = await qwenClient.chat(messages);
+    let result;
+    try {
+      // Call with timeout and limited retries
+      result = await qwenClient.chat(messages, { timeout: 20000, retries: 1 });
+    } catch (error) {
+      console.error('Qwen API failed for article, using fallback:', error instanceof Error ? error.message : error);
+
+      // Fall back to basic note format
+      const basicNote = {
+        title: article.title,
+        content: `# ${article.title}
+
+**来源：** ${article.source}
+**分类：** ${article.category}
+**链接：** ${article.link}
+
+## 摘要
+${article.description}
+
+## 推荐理由
+${article.reason}
+
+---
+*发布时间：${new Date(article.pubDate).toLocaleString('zh-CN')}*`,
+        tags: ['技术文章', article.category, article.source],
+        isAiGenerated: false,
+      };
+
+      await dbHelpers.saveNote({
+        id: crypto.randomUUID(),
+        ...basicNote,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        note: basicNote,
+        fallback: true,
+      });
+    }
 
     // Save to notes database
     const note = {
