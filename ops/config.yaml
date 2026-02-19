@@ -1,0 +1,55 @@
+# ops/config.yaml -- edit these to adjust your system
+# See ops/derivation.md for WHY each choice was made
+
+dimensions:
+  granularity: moderate
+  organization: flat
+  linking: explicit
+  processing: moderate
+  navigation: 2-tier
+  maintenance: condition-based
+  schema: moderate-dense
+  automation: full
+
+features:
+  semantic-search: false
+  processing-pipeline: true
+  sleep-processing: false
+  voice-capture: false
+
+processing:
+  depth: standard          # deep | standard | quick
+  chaining: suggested      # manual | suggested | automatic
+  extraction:
+    selectivity: moderate  # strict | moderate | permissive
+    categories:
+      - 开发心得
+      - API文档
+      - 调试记录
+      - 架构决策
+      - 代码片段
+      - 调试流程
+      - 第三方库手册
+  verification:
+    description_test: true
+    schema_check: true
+    link_check: true
+  reweave:
+    scope: related         # related | broad | full
+    frequency: after_create # after_create | periodic | manual
+
+provenance: full
+
+personality:
+  enabled: false
+
+debugging:
+  auto_capture: true       # 自动捕获调试问题
+  capture_on_session_end: true
+  manual_command: true     # /arscontexta:捕获调试
+
+multi_domain:
+  domains:
+    - SaaS
+    - iOS
+  cross_domain_linking: true
