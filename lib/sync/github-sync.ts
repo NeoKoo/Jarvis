@@ -497,8 +497,8 @@ export class EnvGitHubSyncService {
     localNotes: Note[]
   ): Promise<{ uploaded: number; downloaded: number; conflicts: number }> {
     let uploaded = 0;
-    let downloaded = 0;
-    let conflicts = 0;
+    const downloaded = 0;
+    const conflicts = 0;
 
     // Get list of remote notes
     const noteFiles = await this.apiClient.listFiles('notes');
@@ -587,7 +587,7 @@ export class EnvGitHubSyncService {
   ): Promise<{ uploaded: number; downloaded: number; conflicts: number; downloadedTasks: Task[] }> {
     let uploaded = 0;
     let downloaded = 0;
-    let conflicts = 0;
+    const conflicts = 0;
     const downloadedTasks: Task[] = [];
 
     // Get list of remote tasks

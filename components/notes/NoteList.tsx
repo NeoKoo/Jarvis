@@ -247,7 +247,7 @@ export function NoteList() {
               <CardContent className="p-8 text-center text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>暂无笔记</p>
-                <p className="text-sm mt-2">点击"新建笔记"创建您的第一条笔记</p>
+                <p className="text-sm mt-2">点击&ldquo;新建笔记&rdquo;创建您的第一条笔记</p>
               </CardContent>
             </Card>
           ) : (

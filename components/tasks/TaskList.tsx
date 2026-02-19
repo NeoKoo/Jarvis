@@ -266,7 +266,7 @@ export function TaskList() {
             <CardContent className="p-8 text-center text-muted-foreground">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>暂无任务</p>
-              <p className="text-sm mt-2">点击"新建任务"创建您的第一个任务</p>
+              <p className="text-sm mt-2">点击&ldquo;新建任务&rdquo;创建您的第一个任务</p>
             </CardContent>
           </Card>
         ) : (

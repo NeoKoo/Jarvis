@@ -6,7 +6,7 @@ export interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
-let toastListeners: ((toast: Toast) => void)[] = [];
+const toastListeners: ((toast: Toast) => void)[] = [];
 let toasts: Toast[] = [];
 
 export function useToast() {

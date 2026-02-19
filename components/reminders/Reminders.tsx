@@ -192,7 +192,7 @@ export function Reminders() {
             <CardContent className="p-8 text-center text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>暂无提醒</p>
-              <p className="text-sm mt-2">点击"新建提醒"创建您的第一个提醒</p>
+              <p className="text-sm mt-2">点击&ldquo;新建提醒&rdquo;创建您的第一个提醒</p>
             </CardContent>
           </Card>
         ) : (

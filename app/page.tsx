@@ -182,7 +182,7 @@ export default function Home() {
               将Jarvis安装为应用以获得最佳体验
             </p>
             <p className="text-xs text-muted-foreground">
-              使用浏览器的"添加到主屏幕"或"安装应用"选项
+              使用浏览器的&ldquo;添加到主屏幕&rdquo;或&ldquo;安装应用&rdquo;选项
             </p>
           </CardContent>
         </Card>

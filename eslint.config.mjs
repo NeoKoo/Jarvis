@@ -12,6 +12,13 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    ignores: [
+      "next-env.d.ts",
+      "jest.config.js",
+      "next.config.js",
+    ],
+  },
+  {
     rules: {
       // Add custom rules here
       "@typescript-eslint/no-unused-vars": [
@@ -22,6 +29,10 @@ const eslintConfig = [
         },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
+      // Allow require in config files
+      "@typescript-eslint/no-require-imports": "off",
+      // Allow triple slash references for Next.js types
+      "@typescript-eslint/triple-slash-reference": "off",
     },
   },
 ];
