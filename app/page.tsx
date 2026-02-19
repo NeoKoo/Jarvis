@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare, Calendar, CheckSquare, Mic, BookOpen, Bell } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
+import { GitHubTrending } from '@/components/github/GitHubTrending';
 
 export default function Home() {
   const [time, setTime] = useState(new Date());
@@ -112,6 +113,13 @@ export default function Home() {
             );
           })}
         </div>
+
+        {/* GitHub 热门仓库 */}
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-6">
+            <GitHubTrending />
+          </CardContent>
+        </Card>
 
         {/* 功能特点 */}
         <Card className="backdrop-blur-sm bg-card/50">
