@@ -30,6 +30,16 @@ interface Digest {
   generatedAt: string;
 }
 
+const getCategoryColor = (category: string) => {
+  const colors: Record<string, string> = {
+    'AI/ML': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+    '安全': 'bg-red-500/10 text-red-500 border-red-500/20',
+    '工程': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    '观点': 'bg-green-500/10 text-green-500 border-green-500/20',
+  };
+  return colors[category] || 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+};
+
 function ArticleCard({ article, index }: ArticleCardProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -171,18 +181,6 @@ export function DailyDigest() {
   if (!digest) {
     return null;
   }
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'AI/ML': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-      '安全': 'bg-red-500/10 text-red-500 border-red-500/20',
-      '工程': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      '观点': 'bg-green-500/10 text-green-500 border-green-500/20',
-    };
-    return colors[category] || 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-  };
-
-  if (loading) {
 
   return (
     <div className="space-y-4">
