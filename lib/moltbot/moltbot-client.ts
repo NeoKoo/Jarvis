@@ -31,9 +31,9 @@ export class MoltbotClient {
   private messageHandlers: Array<(event: ChatEvent) => void> = [];
   private statusHandlers: Array<(status: 'connected' | 'disconnected' | 'connecting' | 'error') => void> = [];
   private historyHandlers: Array<(messages: MoltbotMessage[]) => void> = [];
-  private pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
-  private connectResolve: Function | null = null;
-  private connectReject: Function | null = null;
+  private pendingRequests: Map<string, { resolve: (value: any) => void; reject: (reason?: any) => void }> = new Map();
+  private connectResolve: ((value: void) => void) | null = null;
+  private connectReject: ((reason?: any) => void) | null = null;
 
   constructor(config: MoltbotConfig) {
     this.config = {
