@@ -51,6 +51,40 @@ export async function POST(request: Request) {
     // 2. Generate Chinese summary using Qwen
     const qwenClient = new QwenClient();
 
+    // Check if Qwen is configured
+    if (!qwenClient.isConfigured()) {
+      console.log('[GitHub Save] Qwen not configured, using basic note');
+      const basicNote = {
+        title: `${repository.fullName} - GitHub 仓库笔记`,
+        content: `# ${repository.fullName}
+
+**描述：** ${repository.description}
+**语言：** ${repository.language}
+**星标数：** ${repository.stars.toLocaleString()}
+**链接：** ${repository.url}
+
+${readmeContent ? `## README\n${readmeContent.substring(0, 5000)}\n\n...\n*（README 已截断）*` : ''}
+
+---
+*由系统自动生成于 ${new Date().toLocaleString('zh-CN')}*`,
+        tags: ['github', '开源', repository.language.toLowerCase(), repository.fullName.split('/')[1]],
+        isAiGenerated: false,
+      };
+
+      await dbHelpers.saveNote({
+        id: crypto.randomUUID(),
+        ...basicNote,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        note: basicNote,
+        fallback: true,
+      });
+    }
+
     const prompt = `请帮我分析这个 GitHub 仓库，并生成一份中文的知识库笔记。
 
 仓库信息：
@@ -102,6 +136,12 @@ ${repository.url}
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages before sending
+    const hasValidContent = messages.some(msg => msg.content && msg.content.trim().length > 0);
+    if (!hasValidContent) {
+      throw new Error('No valid message content to send to API');
+    }
 
     let result;
     try {

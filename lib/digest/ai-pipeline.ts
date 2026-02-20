@@ -23,6 +23,40 @@ import { generateTrendsPrompt, generateDailySummaryPrompt } from './prompts/tren
 const qwenClient = new QwenClient();
 
 // ============================================================================
+// Validation Helpers
+// ============================================================================
+
+/**
+ * Validate Qwen configuration before processing
+ */
+function validateQwenConfig(): boolean {
+  const isConfigured = qwenClient.isConfigured();
+  if (!isConfigured) {
+    console.error('[AI Pipeline] QWEN_API_KEY is not configured');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validate and sanitize messages before sending to API
+ */
+function validateMessages(messages: Message[]): boolean {
+  if (!messages || messages.length === 0) {
+    console.error('[AI Pipeline] No messages provided');
+    return false;
+  }
+
+  const hasValidContent = messages.some(msg => msg.content && msg.content.trim().length > 0);
+  if (!hasValidContent) {
+    console.error('[AI Pipeline] All messages have empty content');
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================================
 // Stage 1: Combined Processing (Scoring + Categorization + Translation)
 // ============================================================================
 
@@ -32,6 +66,12 @@ const qwenClient = new QwenClient();
  */
 export async function processArticleWithAI(item: RSSItem): Promise<DigestArticle> {
   try {
+    // Validate Qwen configuration first
+    if (!validateQwenConfig()) {
+      console.log('[AI Pipeline] Qwen not configured, using fallback');
+      return createFallbackArticle(item);
+    }
+
     // Ensure description is not empty (some RSS feeds return empty descriptions)
     const safeDescription = item.description?.trim() || `Article from ${item.source}: ${item.title}`;
 
@@ -76,6 +116,12 @@ Be accurate and consistent. Return ONLY valid JSON.`,
       },
       { id: '2', role: 'user', content: combinedPrompt, timestamp: new Date() },
     ];
+
+    // Validate messages before sending
+    if (!validateMessages(messages)) {
+      console.error('[AI Pipeline] Message validation failed, using fallback');
+      return createFallbackArticle(item);
+    }
 
     const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     const aiData = parseJSONResponse(result.content);
@@ -126,6 +172,12 @@ export async function processArticlesBatch(items: RSSItem[]): Promise<DigestArti
 
   console.log(`[AI Pipeline] Processing ${items.length} articles in batch...`);
 
+  // Validate Qwen configuration before processing
+  if (!validateQwenConfig()) {
+    console.log('[AI Pipeline] Qwen not configured, returning fallback articles');
+    return items.map(item => createFallbackArticle(item));
+  }
+
   try {
     // Stage 1: Batch processing for scoring + categorization + translation
     const batchSize = 3;
@@ -146,6 +198,13 @@ export async function processArticlesBatch(items: RSSItem[]): Promise<DigestArti
         },
         { id: '2', role: 'user', content: batchPrompt, timestamp: new Date() },
       ];
+
+      // Validate messages before sending
+      if (!validateMessages(messages)) {
+        console.error('[AI Pipeline] Message validation failed for batch, using fallbacks');
+        processedArticles.push(...batch.map(item => createFallbackArticle(item)));
+        continue;
+      }
 
       const result = await qwenClient.chat(messages, { timeout: 60000, retries: 2 });
       const aiResults = parseJSONResponse(result.content);
@@ -213,6 +272,11 @@ export async function processArticlesBatch(items: RSSItem[]): Promise<DigestArti
 
 async function generateArticleSummary(item: RSSItem): Promise<any> {
   try {
+    // Check configuration before calling API
+    if (!validateQwenConfig()) {
+      return { summary: item.description.substring(0, 200) };
+    }
+
     const messages: Message[] = [
       {
         id: '1',
@@ -227,6 +291,11 @@ async function generateArticleSummary(item: RSSItem): Promise<any> {
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages
+    if (!validateMessages(messages)) {
+      return { summary: item.description.substring(0, 200) };
+    }
 
     const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     return parseJSONResponse(result.content);
@@ -246,6 +315,11 @@ async function generateRecommendationReason(article: {
   scores: any;
 }): Promise<string> {
   try {
+    // Check configuration before calling API
+    if (!validateQwenConfig()) {
+      return '推荐阅读';
+    }
+
     const messages: Message[] = [
       {
         id: '1',
@@ -260,6 +334,11 @@ async function generateRecommendationReason(article: {
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages
+    if (!validateMessages(messages)) {
+      return '推荐阅读';
+    }
 
     const result = await qwenClient.chat(messages, { timeout: 20000, retries: 2 });
     return result.content.trim().replace(/^["']|["']$/g, '');
@@ -282,6 +361,11 @@ export async function generateTrends(articles: DigestArticle[]): Promise<string[
   const topArticles = articles.slice(0, 20); // Analyze top 20 for trends
 
   try {
+    // Check configuration before calling API
+    if (!validateQwenConfig()) {
+      return ['技术持续创新', '工程实践分享', '安全最佳实践'];
+    }
+
     const messages: Message[] = [
       {
         id: '1',
@@ -296,6 +380,11 @@ export async function generateTrends(articles: DigestArticle[]): Promise<string[
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages
+    if (!validateMessages(messages)) {
+      return ['技术持续创新', '工程实践分享', '安全最佳实践'];
+    }
 
     const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     const data = parseJSONResponse(result.content);
@@ -319,6 +408,11 @@ export async function generateDailySummary(
   }
 
   try {
+    // Check configuration before calling API
+    if (!validateQwenConfig()) {
+      return `今日精选 ${articles.length} 篇技术文章，涵盖 AI、工程、安全等领域。`;
+    }
+
     const messages: Message[] = [
       {
         id: '1',
@@ -333,6 +427,11 @@ export async function generateDailySummary(
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages
+    if (!validateMessages(messages)) {
+      return `今日精选 ${articles.length} 篇技术文章，涵盖 AI、工程、安全等领域。`;
+    }
 
     const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     return result.content.trim();

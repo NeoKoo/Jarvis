@@ -74,6 +74,43 @@ ${article.reason}
     // Use AI to enhance the article note
     const qwenClient = new QwenClient();
 
+    // Check if Qwen is configured
+    if (!qwenClient.isConfigured()) {
+      console.log('[Article Save] Qwen not configured, using basic note');
+      const basicNote = {
+        title: article.title,
+        content: `# ${article.title}
+
+**来源：** ${article.source}
+**分类：** ${article.category}
+**链接：** ${article.link}
+
+## 摘要
+${article.description}
+
+## 推荐理由
+${article.reason}
+
+---
+*发布时间：${new Date(article.pubDate).toLocaleString('zh-CN')}*`,
+        tags: ['技术文章', article.category, article.source],
+        isAiGenerated: false,
+      };
+
+      await dbHelpers.saveNote({
+        id: crypto.randomUUID(),
+        ...basicNote,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return NextResponse.json({
+        success: true,
+        note: basicNote,
+        fallback: true,
+      });
+    }
+
     const prompt = `请帮我将这篇技术文章整理成一篇结构清晰的笔记。
 
 文章信息：
@@ -122,6 +159,12 @@ ${article.reason}
         timestamp: new Date(),
       },
     ];
+
+    // Validate messages before sending
+    const hasValidContent = messages.some(msg => msg.content && msg.content.trim().length > 0);
+    if (!hasValidContent) {
+      throw new Error('No valid message content to send to API');
+    }
 
     let result;
     try {
