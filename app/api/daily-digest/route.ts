@@ -77,7 +77,15 @@ export async function GET(request: Request) {
 
     // 4. Process articles with AI (batch processing)
     console.log('[Digest] Step 2/6: Processing articles with AI...');
-    const processedArticles = await processArticlesBatch(rawArticles);
+
+    // Limit articles before AI processing to reduce API calls
+    // Take first 100 articles to process (sorted by date, newest first)
+    const articlesForAI = rawArticles
+      .sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime())
+      .slice(0, 100);
+
+    console.log(`[Digest] Processing ${articlesForAI.length} articles with AI (limited from ${rawArticles.length} total)`);
+    const processedArticles = await processArticlesBatch(articlesForAI);
     console.log(`[Digest] Processed ${processedArticles.length} articles with AI`);
 
     // 5. Filter by minimum score and sort

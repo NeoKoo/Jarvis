@@ -3,6 +3,10 @@ import { Message } from './types';
 
 async function testQwenAPI() {
   console.log('Testing Qwen API...');
+
+  // Temporarily set API key for testing
+  process.env.QWEN_API_KEY = 'sk-60960c67ba4348f6862ee4dc6311e8c3';
+
   const client = new QwenClient();
 
   const messages: Message[] = [

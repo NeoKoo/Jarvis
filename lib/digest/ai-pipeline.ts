@@ -77,7 +77,7 @@ Be accurate and consistent. Return ONLY valid JSON.`,
       { id: '2', role: 'user', content: combinedPrompt, timestamp: new Date() },
     ];
 
-    const result = await qwenClient.chat(messages, { timeout: 15000, retries: 1 });
+    const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     const aiData = parseJSONResponse(result.content);
 
     // Validate and normalize data
@@ -128,7 +128,7 @@ export async function processArticlesBatch(items: RSSItem[]): Promise<DigestArti
 
   try {
     // Stage 1: Batch processing for scoring + categorization + translation
-    const batchSize = 5;
+    const batchSize = 3;
     const processedArticles: DigestArticle[] = [];
 
     for (let i = 0; i < items.length; i += batchSize) {
@@ -147,7 +147,7 @@ export async function processArticlesBatch(items: RSSItem[]): Promise<DigestArti
         { id: '2', role: 'user', content: batchPrompt, timestamp: new Date() },
       ];
 
-      const result = await qwenClient.chat(messages, { timeout: 20000, retries: 1 });
+      const result = await qwenClient.chat(messages, { timeout: 60000, retries: 2 });
       const aiResults = parseJSONResponse(result.content);
 
       // Process results and generate summaries for each
@@ -228,7 +228,7 @@ async function generateArticleSummary(item: RSSItem): Promise<any> {
       },
     ];
 
-    const result = await qwenClient.chat(messages, { timeout: 15000, retries: 1 });
+    const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     return parseJSONResponse(result.content);
   } catch (error) {
     console.error('[AI Pipeline] Summary generation error:', error);
@@ -261,7 +261,7 @@ async function generateRecommendationReason(article: {
       },
     ];
 
-    const result = await qwenClient.chat(messages, { timeout: 10000, retries: 1 });
+    const result = await qwenClient.chat(messages, { timeout: 20000, retries: 2 });
     return result.content.trim().replace(/^["']|["']$/g, '');
   } catch (error) {
     console.error('[AI Pipeline] Recommendation generation error:', error);
@@ -297,7 +297,7 @@ export async function generateTrends(articles: DigestArticle[]): Promise<string[
       },
     ];
 
-    const result = await qwenClient.chat(messages, { timeout: 20000, retries: 2 });
+    const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     const data = parseJSONResponse(result.content);
 
     return data.trends || [];
@@ -334,7 +334,7 @@ export async function generateDailySummary(
       },
     ];
 
-    const result = await qwenClient.chat(messages, { timeout: 15000, retries: 1 });
+    const result = await qwenClient.chat(messages, { timeout: 30000, retries: 2 });
     return result.content.trim();
   } catch (error) {
     console.error('[AI Pipeline] Daily summary generation error:', error);

@@ -7,23 +7,33 @@ interface QwenMessage {
 
 interface QwenAPIRequest {
   model: string;
-  messages: QwenMessage[];
+  input: {
+    messages: QwenMessage[];
+  };
   stream?: boolean;
 }
 
 interface QwenAPIResponse {
-  choices: Array<{
-    message: {
-      role: string;
-      content: string;
-    };
+  output: {
     finish_reason: string;
-  }>;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+    text: string;
+    choices?: Array<{
+      message: {
+        role: string;
+        content: string;
+      };
+      finish_reason: string;
+    }>;
   };
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    prompt_tokens_details?: {
+      cached_tokens: number;
+    };
+  };
+  request_id: string;
 }
 
 interface RetryOptions {
@@ -66,6 +76,9 @@ export class QwenClient {
     if (converted.length === 0) {
       throw new Error('No valid messages to send to API');
     }
+
+    // Debug logging
+    console.log('[Qwen Client] Sending messages:', JSON.stringify(converted, null, 2));
 
     return converted;
   }
@@ -178,8 +191,9 @@ export class QwenClient {
           },
           body: JSON.stringify({
             model: 'qwen-max',
-            messages: this.convertMessages(messages),
-            result_format: 'message',
+            input: {
+              messages: this.convertMessages(messages),
+            },
           } as QwenAPIRequest),
         },
         timeout
@@ -197,14 +211,15 @@ export class QwenClient {
 
     const data: QwenAPIResponse = await response.json();
 
-    const content = data.choices[0]?.message?.content || '';
+    // Qwen API returns either output.text (non-streaming) or output.choices[0].message.content (streaming format)
+    const content = data.output?.text || data.output?.choices?.[0]?.message?.content || '';
 
     return {
       content,
       model: 'qwen-max',
       usage: {
-        promptTokens: data.usage.prompt_tokens,
-        completionTokens: data.usage.completion_tokens,
+        promptTokens: data.usage.input_tokens,
+        completionTokens: data.usage.output_tokens,
         totalTokens: data.usage.total_tokens,
       },
     };
@@ -234,8 +249,9 @@ export class QwenClient {
           },
           body: JSON.stringify({
             model: 'qwen-max',
-            messages: this.convertMessages(messages),
-            result_format: 'message',
+            input: {
+              messages: this.convertMessages(messages),
+            },
             stream: true,
           } as QwenAPIRequest),
         },
