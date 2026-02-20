@@ -32,10 +32,13 @@ const qwenClient = new QwenClient();
  */
 export async function processArticleWithAI(item: RSSItem): Promise<DigestArticle> {
   try {
+    // Ensure description is not empty (some RSS feeds return empty descriptions)
+    const safeDescription = item.description?.trim() || `Article from ${item.source}: ${item.title}`;
+
     // Convert pubDate to string for prompts
     const itemForPrompt = {
       title: item.title,
-      description: item.description,
+      description: safeDescription,
       source: item.source,
       pubDate: item.pubDate.toISOString(),
     };
