@@ -210,3 +210,149 @@ export interface VideoSummaryResponse {
     metadata?: Record<string, any>;
   };
 }
+
+// ============================================================================
+// Daily Digest Types
+// ============================================================================
+
+// RSS Feed Configuration
+export interface RSSFeedConfig {
+  name: string;
+  url: string;
+  category: RSSCategory;
+  language: 'en' | 'zh' | 'mixed';
+  priority: number; // 1-10, for feed selection
+  enabled: boolean;
+  lastFetched?: Date;
+  fetchErrorCount: number;
+}
+
+// Six-Category System
+export type RSSCategory =
+  | 'ai-ml'
+  | 'security'
+  | 'engineering'
+  | 'tools'
+  | 'opinion'
+  | 'other';
+
+// Three-Dimensional Scoring System
+export interface ArticleScores {
+  relevance: number;  // 1-10: How relevant to tech trends
+  quality: number;    // 1-10: Content quality and depth
+  timeliness: number; // 1-10: How fresh/time-sensitive
+  overall: number;    // Weighted average (relevance*0.4 + quality*0.4 + timeliness*0.2)
+}
+
+// Enhanced Article Structure
+export interface DigestArticle {
+  // Basic metadata
+  id: string;
+  title: string;
+  titleZh?: string;  // Chinese translation
+  link: string;
+  source: string;
+  pubDate: Date;
+  description: string;
+
+  // AI-Enhanced fields
+  category: RSSCategory;
+  scores: ArticleScores;
+  keywords: string[];  // 2-4 English keywords
+  summary: string;     // 4-6 sentence structured summary
+  reason: string;      // 1-sentence recommendation reason
+
+  // Metadata
+  processedAt: Date;
+  readingTime?: number; // estimated reading time in minutes
+}
+
+// Original RSS Item (before AI processing)
+export interface RSSItem {
+  title: string;
+  link: string;
+  pubDate: Date;
+  description: string;
+  source: string;
+  category: string;
+}
+
+// Digest Response
+export interface DailyDigestResponse {
+  success: boolean;
+  digest: {
+    summary: string;           // 3-5 sentence trend analysis
+    trends: string[];          // Trend keywords
+    articles: DigestArticle[]; // Top 10-15 articles
+    statistics: DigestStatistics;
+    visualizations: DigestVisualization;
+    generatedAt: string;
+  };
+  error?: string;
+}
+
+// Statistics for Visualization
+export interface DigestStatistics {
+  totalArticles: number;
+  categoryDistribution: Record<RSSCategory, number>;
+  averageScores: {
+    relevance: number;
+    quality: number;
+    timeliness: number;
+  };
+  topKeywords: Array<{ keyword: string; count: number }>;
+  sourcesAnalyzed: number;
+}
+
+// Visualization Data
+export interface DigestVisualization {
+  categoryChart: string;      // Mermaid pie chart
+  scoreChart: string;         // Mermaid bar chart
+  tagCloud: Array<{           // Tag cloud data
+    tag: string;
+    weight: number;
+  }>;
+  trendChart?: string;        // Optional trend visualization
+}
+
+// Cache Entry
+export interface ArticleCache {
+  article: DigestArticle;
+  cachedAt: Date;
+  hits: number;
+}
+
+// Digest Preferences
+export interface DigestPreferences {
+  // Content filtering
+  minScore: number;           // Minimum overall score (1-10, default: 6)
+  categories: string[];        // Enabled categories
+  excludeKeywords: string[];  // Keywords to filter out
+
+  // Digest settings
+  maxArticles: number;         // Maximum articles per digest (default: 15)
+  timeRange: number;          // Hours to look back (default: 48)
+
+  // AI settings
+  enableTranslation: boolean; // Translate titles to Chinese
+  enableScoring: boolean;     // Enable AI scoring
+  enableCategorization: boolean;
+
+  // Performance
+  batchSize: number;          // Concurrent API calls (default: 5)
+  cacheExpiry: number;        // Cache expiry in hours (default: 24)
+}
+
+// Digest Error Types
+export type DigestErrorCode = 'API_ERROR' | 'PARSE_ERROR' | 'FETCH_ERROR' | 'UNKNOWN';
+
+export class DigestError extends Error {
+  constructor(
+    message: string,
+    public code: DigestErrorCode,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'DigestError';
+  }
+}
