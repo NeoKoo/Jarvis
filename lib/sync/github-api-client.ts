@@ -31,17 +31,26 @@ export class GitHubApiClient {
   /**
    * Validate GitHub connection
    */
-  async validateConnection(): Promise<boolean> {
+  async validateConnection(): Promise<{ valid: boolean; error?: string }> {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'validate' }),
       });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        return { valid: false, error: error.error || response.statusText };
+      }
+
       const data = await response.json();
-      return data.valid;
-    } catch {
-      return false;
+      return { valid: data.valid };
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Connection failed'
+      };
     }
   }
 

@@ -85,7 +85,8 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   validateConfig: async () => {
     try {
       const service = new EnvGitHubSyncService();
-      return await service.validateConfig();
+      const result = await service.validateConfig();
+      return result.valid;
     } catch {
       return false;
     }

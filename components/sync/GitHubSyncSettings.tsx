@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSyncStore } from '@/stores/sync-store';
+import { useToast } from '@/hooks/use-toast';
 import {
   Github,
   RefreshCw,
@@ -29,6 +30,7 @@ export function GitHubSyncSettings() {
     sync,
   } = useSyncStore();
 
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,12 +51,12 @@ export function GitHubSyncSettings() {
       const result = await sync(notes, tasks);
 
       if (result.success) {
-        alert(`同步成功！\n笔记: ↑${result.notes.uploaded} ↓${result.notes.downloaded}\n任务: ↑${result.tasks.uploaded} ↓${result.tasks.downloaded}`);
+        toast.success(`同步成功！笔记: ↑${result.notes.uploaded} ↓${result.notes.downloaded} | 任务: ↑${result.tasks.uploaded} ↓${result.tasks.downloaded}`);
       } else {
-        alert(`同步失败: ${result.error}`);
+        toast.error(`同步失败: ${result.error}`);
       }
     } catch (error) {
-      alert(`同步出错: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.error(`同步出错: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 

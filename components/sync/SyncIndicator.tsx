@@ -1,11 +1,13 @@
 'use client';
 
 import { useSyncStore } from '@/stores/sync-store';
+import { useToast } from '@/hooks/use-toast';
 import { Cloud, CloudOff, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function SyncIndicator() {
   const { isEnabled, isSyncing, lastSyncAt, sync } = useSyncStore();
+  const { toast } = useToast();
 
   const formatLastSync = (date: Date | null) => {
     if (!date) return '从未同步';
@@ -29,9 +31,16 @@ export function SyncIndicator() {
       const notes = useNoteStore.getState().notes;
       const tasks = useTaskStore.getState().tasks;
 
-      await sync(notes, tasks);
+      const result = await sync(notes, tasks);
+
+      if (result.success) {
+        toast.success(`同步成功！笔记: ↑${result.notes.uploaded} ↓${result.notes.downloaded} | 任务: ↑${result.tasks.uploaded} ↓${result.tasks.downloaded}`);
+      } else {
+        toast.error(`同步失败: ${result.error}`);
+      }
     } catch (error) {
       console.error('Sync failed:', error);
+      toast.error(`同步出错: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 

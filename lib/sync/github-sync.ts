@@ -708,7 +708,7 @@ export class EnvGitHubSyncService {
   /**
    * Validate GitHub configuration
    */
-  async validateConfig(): Promise<boolean> {
+  async validateConfig(): Promise<{ valid: boolean; error?: string }> {
     return this.apiClient.validateConnection();
   }
 }

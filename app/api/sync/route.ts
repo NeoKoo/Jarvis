@@ -3,11 +3,25 @@ import { GitHubClient } from '@/lib/sync/github-client';
 
 // GET /api/sync/config - Get sync configuration (without token)
 export async function GET(request: NextRequest) {
+  const token = process.env.GITHUB_TOKEN;
+  const owner = process.env.GITHUB_REPO_OWNER;
+  const repo = process.env.GITHUB_REPO_NAME;
+
+  // Check if credentials are configured and NOT placeholder values
+  const isConfigured = !!(
+    token &&
+    owner &&
+    repo &&
+    token !== 'your_github_token_here' &&
+    owner !== 'your_github_username' &&
+    repo !== 'jarvis-data'  // default placeholder
+  );
+
   const config = {
-    owner: process.env.GITHUB_REPO_OWNER || '',
-    repo: process.env.GITHUB_REPO_NAME || '',
+    owner: owner || '',
+    repo: repo || '',
     branch: process.env.GITHUB_BRANCH || 'main',
-    isEnabled: !!(process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME),
+    isEnabled: isConfigured,
   };
 
   return NextResponse.json(config);
