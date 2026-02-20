@@ -7,7 +7,8 @@ import {
   VoiceMemo,
   Reminder,
   TimeCapsule,
-  VideoSummary
+  VideoSummary,
+  ArticleCache
 } from '@/types';
 
 export class JarvisDatabase extends Dexie {
@@ -19,12 +20,13 @@ export class JarvisDatabase extends Dexie {
   reminders!: Table<Reminder>;
   timeCapsules!: Table<TimeCapsule>;
   videoSummaries!: Table<VideoSummary>;
+  digestCache!: Table<ArticleCache>;
 
   constructor() {
     super('JarvisDB');
 
     // Define tables and their indexes
-    this.version(3).stores({
+    this.version(4).stores({
       chatSessions: 'id, title, createdAt, updatedAt',
       calendarEvents: 'id, startTime, endTime, createdAt',
       tasks: 'id, status, priority, dueDate, createdAt, category',
@@ -32,7 +34,8 @@ export class JarvisDatabase extends Dexie {
       voiceMemos: 'id, createdAt, tags',
       reminders: 'id, type, sent, eventId, taskId',
       timeCapsules: 'id, openDate, createdAt, isOpened',
-      videoSummaries: 'id, platform, createdAt, tags, isAiGenerated'
+      videoSummaries: 'id, platform, createdAt, tags, isAiGenerated',
+      digestCache: 'id, cachedAt, article.category, [article.category+cachedAt]'
     });
   }
 }
@@ -226,5 +229,47 @@ export const dbHelpers = {
 
   async deleteVideoSummary(id: string): Promise<void> {
     await db.videoSummaries.delete(id);
+  },
+
+  // Digest Cache Operations
+  async saveDigestCache(cache: ArticleCache): Promise<void> {
+    await db.digestCache.put(cache);
+  },
+
+  async getDigestCache(id: string): Promise<ArticleCache | undefined> {
+    return await db.digestCache.get(id);
+  },
+
+  async getDigestCacheByCategory(category: string, maxAge: number = 24 * 60 * 60 * 1000): Promise<ArticleCache[]> {
+    const cutoff = new Date(Date.now() - maxAge);
+    return await db.digestCache
+      .where('article.category')
+      .equals(category)
+      .and(cache => cache.cachedAt >= cutoff)
+      .toArray();
+  },
+
+  async invalidateOldDigestCache(maxAge: number = 24 * 60 * 60 * 1000): Promise<number> {
+    const cutoff = new Date(Date.now() - maxAge);
+    return await db.digestCache.where('cachedAt').below(cutoff).delete();
+  },
+
+  async clearDigestCache(): Promise<void> {
+    await db.digestCache.clear();
+  },
+
+  async getDigestCacheStats(): Promise<{ total: number; byCategory: Record<string, number> }> {
+    const all = await db.digestCache.toArray();
+    const byCategory: Record<string, number> = {};
+
+    all.forEach(cache => {
+      const cat = cache.article.category;
+      byCategory[cat] = (byCategory[cat] || 0) + 1;
+    });
+
+    return {
+      total: all.length,
+      byCategory,
+    };
   }
 };
