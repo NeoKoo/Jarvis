@@ -44,7 +44,7 @@ export function DigestVisualizations({
         </CardHeader>
         <CardContent>
           <MermaidChart chart={visualizations.scoreChart} />
-          <ScoreStats scores={statistics.averageScores} />
+          <ScoreStats relevance={statistics.averageScores.relevance} quality={statistics.averageScores.quality} timeliness={statistics.averageScores.timeliness} />
         </CardContent>
       </Card>
 
@@ -112,7 +112,7 @@ function CategoryStats({
   );
 }
 
-function ScoreStats(scores: {
+function ScoreStats({ relevance, quality, timeliness }: {
   relevance: number;
   quality: number;
   timeliness: number;
@@ -122,27 +122,27 @@ function ScoreStats(scores: {
       <div className="text-center p-2 rounded-lg border">
         <div
           className="text-2xl font-bold"
-          style={{ color: getScoreColor(scores.relevance) }}
+          style={{ color: getScoreColor(relevance) }}
         >
-          {scores.relevance}
+          {relevance}
         </div>
         <div className="text-xs text-muted-foreground">相关性</div>
       </div>
       <div className="text-center p-2 rounded-lg border">
         <div
           className="text-2xl font-bold"
-          style={{ color: getScoreColor(scores.quality) }}
+          style={{ color: getScoreColor(quality) }}
         >
-          {scores.quality}
+          {quality}
         </div>
         <div className="text-xs text-muted-foreground">质量</div>
       </div>
       <div className="text-center p-2 rounded-lg border">
         <div
           className="text-2xl font-bold"
-          style={{ color: getScoreColor(scores.timeliness) }}
+          style={{ color: getScoreColor(timeliness) }}
         >
-          {scores.timeliness}
+          {timeliness}
         </div>
         <div className="text-xs text-muted-foreground">时效性</div>
       </div>

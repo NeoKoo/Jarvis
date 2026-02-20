@@ -31,17 +31,10 @@ export function ArticleCard({ article, index }: ArticleCardProps) {
       const data = await response.json();
       if (data.success) {
         setIsSaved(true);
-        toast({
-          title: "已保存",
-          description: "文章已保存到笔记知识库",
-        });
+        toast.success("文章已保存到笔记知识库");
       }
     } catch (error) {
-      toast({
-        title: "保存失败",
-        description: "请稍后重试",
-        variant: "destructive",
-      });
+      toast.error("保存失败，请稍后重试");
     } finally {
       setIsSaving(false);
     }

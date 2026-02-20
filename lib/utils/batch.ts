@@ -143,8 +143,8 @@ export async function processAll<T, R>(
   );
 
   return results
-    .filter((result): result is PromiseFulfilledResult<R> => result.status === 'fulfilled')
-    .map(result => result.value);
+    .filter((result) => result.status === 'fulfilled')
+    .map((result: any) => result.value);
 }
 
 /**

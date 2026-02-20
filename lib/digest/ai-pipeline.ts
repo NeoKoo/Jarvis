@@ -32,16 +32,24 @@ const qwenClient = new QwenClient();
  */
 export async function processArticleWithAI(item: RSSItem): Promise<DigestArticle> {
   try {
+    // Convert pubDate to string for prompts
+    const itemForPrompt = {
+      title: item.title,
+      description: item.description,
+      source: item.source,
+      pubDate: item.pubDate.toISOString(),
+    };
+
     // Combine multiple AI tasks in one API call for efficiency
     const combinedPrompt = `
 **Task 1 - Score the article** (三维评分):
-${generateScoringPrompt(item)}
+${generateScoringPrompt(itemForPrompt)}
 
 **Task 2 - Categorize the article** (分类):
-${generateCategorizationPrompt(item)}
+${generateCategorizationPrompt(itemForPrompt)}
 
 **Task 3 - Translate and extract keywords** (翻译和关键词):
-${generateTranslationPrompt(item)}
+${generateTranslationPrompt(itemForPrompt)}
 
 Return a single JSON object with all results:
 \`\`\`json
@@ -338,15 +346,17 @@ export async function generateDailySummary(
 /**
  * Generate batch processing prompt (combines scoring + categorization + translation)
  */
-function generateBatchProcessingPrompt(items: Array<{
-  index: number;
-  title: string;
-  description: string;
-  source: string;
-}>): string {
+function generateBatchProcessingPrompt(items: RSSItem[]): string {
+  // Convert items to prompt format
+  const itemsForPrompt = items.map((item, index) => ({
+    index,
+    title: item.title,
+    description: item.description.substring(0, 200),
+  }));
+
   return `Process these ${items.length} articles efficiently:
 
-${items.map(item => `[${item.index}] ${item.title}\n${item.description.substring(0, 200)}...`).join('\n\n---\n\n')}
+${itemsForPrompt.map(item => `[${item.index}] ${item.title}\n${item.description}...`).join('\n\n---\n\n')}
 
 For each article, provide:
 1. **Scores**: relevance (1-10), quality (1-10), timeliness (1-10), overall (weighted avg)

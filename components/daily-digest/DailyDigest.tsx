@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { ArticleCard } from './ArticleCard';
 import { DigestVisualizations } from './Visualizations';
@@ -74,10 +73,7 @@ export function DailyDigest() {
         const data = JSON.parse(result);
         if (data.success) {
           setDigest(data.digest);
-          toast({
-            title: "更新成功",
-            description: `已获取 ${data.digest.articles.length} 篇精选文章`,
-          });
+          toast.success(`已获取 ${data.digest.articles.length} 篇精选文章`);
         } else {
           setError(data.error || 'Failed to load digest');
         }
@@ -149,7 +145,7 @@ export function DailyDigest() {
             <h2 className="text-2xl font-bold">每日技术摘要</h2>
             {digest.generatedAt && (
               <p className="text-sm text-muted-foreground">
-                更新于 {format(new Date(digest.generatedAt), 'PPpp HH:mm', { locale: zhCN })}
+                更新于 {format(new Date(digest.generatedAt), 'yyyy年MM月dd日 HH:mm')}
               </p>
             )}
           </div>
