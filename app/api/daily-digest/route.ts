@@ -1,237 +1,170 @@
 import { NextResponse } from 'next/server';
 import { QwenClient } from '@/lib/llm/qwen-client';
-import { Message } from '@/types';
-
-// 精选的技术博客 RSS 源（从原库的 90 个中选取最受欢迎的）
-const TECH_RSS_FEEDS = [
-  { name: "Simon Willison", url: "https://simonwillison.net/atom/everything/", category: "AI/ML" },
-  { name: "Paul Graham", url: "http://www.aaronsw.com/2002/feeds/pgessays.rss", category: "观点" },
-  { name: "Dan Abramov", url: "https://overreacted.io/rss.xml", category: "工程" },
-  { name: "Mitchell Hashimoto", url: "https://mitchellh.com/feed.xml", category: "工程" },
-  { name: "Gwern", url: "https://gwern.substack.com/feed", category: "AI/ML" },
-  { name: "Krebs on Security", url: "https://krebsonsecurity.com/feed/", category: "安全" },
-  { name: "Troy Hunt", url: "https://www.troyhunt.com/rss/", category: "安全" },
-  { name: "John Gruber", url: "https://daringfireball.net/feeds/main", category: "观点" },
-  { name: "Antirez", url: "http://antirez.com/rss", category: "工程" },
-  { name: "Fabien Sanglard", url: "https://fabiensanglard.net/rss.xml", category: "工程" },
-];
-
-interface RSSItem {
-  title: string;
-  link: string;
-  pubDate: string;
-  description: string;
-  source: string;
-}
-
-interface FeedItem {
-  title: string;
-  link: string;
-  pubDate: Date;
-  description: string;
-  source: string;
-  category: string;
-}
+import { getEnabledFeeds } from '@/config/rss-feeds';
+import { DEFAULT_PREFERENCES } from '@/config/digest-preferences';
+import { fetchRSSFeeds } from '@/lib/rss/fetcher';
+import { processArticlesBatch, generateTrends, generateDailySummary } from '@/lib/digest/ai-pipeline';
+import { generateStatistics, generateVisualization } from '@/lib/digest/statistics';
+import { cacheArticles, invalidateOldCache } from '@/lib/digest/cache';
+import { DailyDigestResponse, DigestArticle, RSSItem } from '@/types';
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  console.log('[Digest] Starting daily digest generation...');
+
   try {
     const { searchParams } = new URL(request.url);
     const forceRefresh = searchParams.get('refresh') === 'true';
 
-    // 1. Fetch RSS feeds
-    const articles: FeedItem[] = [];
-    const cutoffDate = new Date(Date.now() - 48 * 60 * 60 * 1000); // 48小时前
-
-    for (const feed of TECH_RSS_FEEDS) {
-      try {
-        const response = await fetch(feed.url, {
-          next: { revalidate: 3600 }, // Cache for 1 hour
-        });
-
-        if (!response.ok) continue;
-
-        const text = await response.text();
-        const items = parseRSS(text, feed.name, feed.category);
-
-        for (const item of items) {
-          if (item.pubDate > cutoffDate) {
-            articles.push(item);
-          }
-        }
-      } catch (error) {
-        console.error(`Error fetching ${feed.name}:`, error);
-      }
+    // 1. Clean old cache
+    if (forceRefresh) {
+      await invalidateOldCache();
+      console.log('[Digest] Cache invalidated');
     }
 
-    // Sort by date
-    articles.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
+    // 2. Fetch RSS feeds
+    console.log('[Digest] Step 1/6: Fetching RSS feeds...');
+    const feeds = getEnabledFeeds();
+    console.log(`[Digest] Found ${feeds.length} enabled RSS sources`);
 
-    // Take top 15
-    const topArticles = articles.slice(0, 15);
+    const rawArticles = await fetchRSSFeeds(feeds, DEFAULT_PREFERENCES.timeRange);
 
-    if (topArticles.length === 0) {
+    if (rawArticles.length === 0) {
+      console.log('[Digest] No articles found, returning empty digest');
       return NextResponse.json({
         success: true,
         digest: {
           summary: '暂时没有新的文章。请稍后再试。',
-          articles: [],
           trends: [],
+          articles: [],
+          statistics: {
+            totalArticles: 0,
+            categoryDistribution: {
+              'ai-ml': 0,
+              'security': 0,
+              'engineering': 0,
+              'tools': 0,
+              'opinion': 0,
+              'other': 0,
+            },
+            averageScores: {
+              relevance: 0,
+              quality: 0,
+              timeliness: 0,
+            },
+            topKeywords: [],
+            sourcesAnalyzed: 0,
+          },
+          visualizations: {
+            categoryChart: '',
+            scoreChart: '',
+            tagCloud: [],
+          },
           generatedAt: new Date().toISOString(),
         },
       });
     }
 
-    // Check if QWEN_API_KEY is configured
+    console.log(`[Digest] Fetched ${rawArticles.length} articles from ${feeds.length} feeds`);
+
+    // 3. Check if QWEN_API_KEY is configured
     const hasQwenKey = process.env.QWEN_API_KEY && process.env.QWEN_API_KEY !== 'your_qwen_api_key_here';
 
     if (!hasQwenKey) {
-      // Return articles without AI processing
-      const formattedArticles = topArticles.slice(0, 5).map(article => ({
-        title: article.title,
-        link: article.link,
-        source: article.source,
-        category: article.category,
-        pubDate: article.pubDate.toISOString(),
-        description: article.description,
-        reason: '最新文章',
-      }));
-
-      return NextResponse.json({
-        success: true,
-        digest: {
-          summary: `今日精选 ${formattedArticles.length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
-          trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
-          articles: formattedArticles,
-          generatedAt: new Date().toISOString(),
-        },
-      });
+      console.log('[Digest] QWEN_API_KEY not configured, returning raw articles');
+      return createBasicDigest(rawArticles);
     }
 
-    // 2. Use AI to generate summary and select top articles
-    const qwenClient = new QwenClient();
+    // 4. Process articles with AI (batch processing)
+    console.log('[Digest] Step 2/6: Processing articles with AI...');
+    const processedArticles = await processArticlesBatch(rawArticles);
+    console.log(`[Digest] Processed ${processedArticles.length} articles with AI`);
 
-    const articlesText = topArticles
-      .map((article, i) => `${i + 1}. ${article.title}\n   来源: ${article.source}\n   摘要: ${article.description.substring(0, 200)}...`)
-      .join('\n\n');
+    // 5. Filter by minimum score and sort
+    console.log('[Digest] Step 3/6: Filtering and sorting articles...');
+    const filteredArticles = processedArticles.filter(
+      article => article.scores.overall >= DEFAULT_PREFERENCES.minScore
+    );
 
-    const prompt = `请帮我分析以下最新的技术文章，并生成一份每日技术摘要。
+    filteredArticles.sort((a, b) => b.scores.overall - a.scores.overall);
 
-文章列表：
-${articlesText}
+    const topArticles = filteredArticles.slice(0, DEFAULT_PREFERENCES.maxArticles);
+    console.log(`[Digest] Selected top ${topArticles.length} articles (score >= ${DEFAULT_PREFERENCES.minScore})`);
 
-请按以下 JSON 格式返回：
-{
-  "summary": "用2-3句话总结今天技术圈的重要趋势和看点",
-  "trends": ["趋势1", "趋势2", "趋势3"],
-  "topArticles": [
-    {
-      "index": 原文章索引（从0开始）,
-      "reason": "推荐理由（1句话）"
-    }
-  ]
-}
-
-要求：
-1. summary 要简洁有力，突出重点
-2. trends 要宏观，反映技术发展方向
-3. topArticles 选择 3-5 篇最值得读的文章，给出简短的推荐理由`;
-
-    const messages: Message[] = [
-      {
-        id: 'system',
-        role: 'system',
-        content: '你是一个技术领域的专家，擅长从海量技术文章中筛选出最有价值的内容，并用简洁的语言总结技术趋势。',
-        timestamp: new Date(),
-      },
-      {
-        id: 'user',
-        role: 'user',
-        content: prompt,
-        timestamp: new Date(),
-      },
-    ];
-
-    let result;
-    try {
-      // Call with timeout and limited retries for faster response
-      result = await qwenClient.chat(messages, { timeout: 20000, retries: 1 });
-    } catch (error) {
-      console.error('Qwen API failed, using fallback:', error instanceof Error ? error.message : error);
-
-      // Fallback response when API fails
-      return NextResponse.json({
-        success: true,
-        digest: {
-          summary: `今日精选 ${topArticles.slice(0, 5).length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
-          trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
-          articles: topArticles.slice(0, 5).map(article => ({
-            title: article.title,
-            link: article.link,
-            source: article.source,
-            category: article.category,
-            pubDate: article.pubDate.toISOString(),
-            description: article.description,
-            reason: '推荐阅读',
-          })),
-          generatedAt: new Date().toISOString(),
-        },
-      });
+    if (topArticles.length === 0) {
+      return createBasicDigest(rawArticles);
     }
 
-    // Parse AI response
-    let aiResponse;
-    try {
-      const jsonMatch = result.content.match(/```json\n?([\s\S]*?)\n?```/) ||
-                       result.content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        aiResponse = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      } else {
-        aiResponse = JSON.parse(result.content);
-      }
-    } catch (e) {
-      // Fallback if JSON parsing fails
-      aiResponse = {
-        summary: '今天有多篇值得阅读的技术文章，涵盖 AI、工程实践和安全等领域。',
-        trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
-        topArticles: topArticles.slice(0, 3).map((_, i) => ({ index: i, reason: '值得一读' })),
-      };
-    }
+    // 6. Generate statistics and visualizations
+    console.log('[Digest] Step 4/6: Generating statistics and visualizations...');
+    const statistics = generateStatistics(topArticles);
+    const visualizations = generateVisualization(statistics);
 
-    // Format response
-    const formattedArticles = (aiResponse.topArticles || [])
-      .slice(0, 5)
-      .map((item: any) => {
-        const article = topArticles[item.index];
-        return {
-          title: article.title,
-          link: article.link,
-          source: article.source,
-          category: article.category,
-          pubDate: article.pubDate.toISOString(),
-          description: article.description,
-          reason: item.reason || '推荐阅读',
-        };
-      });
+    // 7. Generate trend analysis
+    console.log('[Digest] Step 5/6: Analyzing trends...');
+    const trends = await generateTrends(topArticles);
+    console.log(`[Digest] Identified ${trends.length} trends`);
+
+    // 8. Generate daily summary
+    console.log('[Digest] Step 6/6: Generating daily summary...');
+    const summary = await generateDailySummary(topArticles, trends);
+
+    // 9. Cache articles
+    await cacheArticles(topArticles);
+    console.log('[Digest] Cached articles for future requests');
+
+    // 10. Build response
+    const digest = {
+      summary,
+      trends,
+      articles: topArticles,
+      statistics,
+      visualizations,
+      generatedAt: new Date().toISOString(),
+    };
+
+    const duration = Date.now() - startTime;
+    console.log(`[Digest] ✅ Completed in ${duration}ms`);
 
     return NextResponse.json({
       success: true,
-      digest: {
-        summary: aiResponse.summary || '今日技术摘要',
-        trends: aiResponse.trends || [],
-        articles: formattedArticles,
-        generatedAt: new Date().toISOString(),
-      },
+      digest,
     });
   } catch (error) {
-    console.error('Error generating daily digest:', error);
+    console.error('[Digest] Error:', error);
+
+    // Return error response with fallback content
     return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to generate digest',
         digest: {
           summary: '生成摘要时出错，请稍后再试。',
-          articles: [],
           trends: [],
+          articles: [],
+          statistics: {
+            totalArticles: 0,
+            categoryDistribution: {
+              'ai-ml': 0,
+              'security': 0,
+              'engineering': 0,
+              'tools': 0,
+              'opinion': 0,
+              'other': 0,
+            },
+            averageScores: {
+              relevance: 0,
+              quality: 0,
+              timeliness: 0,
+            },
+            topKeywords: [],
+            sourcesAnalyzed: 0,
+          },
+          visualizations: {
+            categoryChart: '',
+            scoreChart: '',
+            tagCloud: [],
+          },
           generatedAt: new Date().toISOString(),
         },
       },
@@ -240,60 +173,66 @@ ${articlesText}
   }
 }
 
-// Simple RSS parser
-function parseRSS(xml: string, sourceName: string, category: string): FeedItem[] {
-  const items: FeedItem[] = [];
+/**
+ * Create basic digest without AI processing
+ * (Fallback when QWEN_API_KEY is not configured)
+ */
+function createBasicDigest(rawArticles: RSSItem[]): NextResponse {
+  // Sort by date and take top articles
+  const sortedArticles = rawArticles
+    .sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime())
+    .slice(0, DEFAULT_PREFERENCES.maxArticles);
 
-  // Extract items using regex
-  const itemMatches = xml.match(/<item[^>]*>[\s\S]*?<\/item>/gi) || [];
+  const articles = sortedArticles.map(item => ({
+    id: crypto.randomUUID(),
+    title: item.title,
+    link: item.link,
+    source: item.source,
+    pubDate: item.pubDate,
+    description: item.description,
+    category: 'other' as const,
+    scores: {
+      relevance: 5,
+      quality: 5,
+      timeliness: 5,
+      overall: 5,
+    },
+    keywords: [],
+    summary: item.description,
+    reason: '最新文章',
+    processedAt: new Date(),
+  }));
 
-  for (const itemMatch of itemMatches) {
-    const titleMatch = itemMatch.match(/<title[^>]*>([^<]+)<\/title>/i) ||
-                       itemMatch.match(/<title[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i);
-    const linkMatch = itemMatch.match(/<link[^>]*>([^<]+)<\/link>/i);
-    const pubDateMatch = itemMatch.match(/<pubDate[^>]*>([^<]+)<\/pubDate>/i);
-    const descMatch = itemMatch.match(/<description[^>]*>([^<]+)<\/description>/i) ||
-                      itemMatch.match(/<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i);
-
-    if (titleMatch && linkMatch) {
-      const title = extractContent(titleMatch[1]);
-      const link = extractContent(linkMatch[1]);
-      const pubDateStr = pubDateMatch ? extractContent(pubDateMatch[1]) : '';
-      const description = descMatch ? extractContent(descMatch[1]).substring(0, 500) : '';
-
-      let pubDate = new Date();
-      if (pubDateStr) {
-        pubDate = new Date(pubDateStr);
-      }
-
-      items.push({
-        title,
-        link,
-        pubDate,
-        description: stripHtml(description),
-        source: sourceName,
-        category,
-      });
-    }
-  }
-
-  return items;
-}
-
-function extractContent(text: string): string {
-  // Remove CDATA wrapper if present
-  return text.replace(/^<!\[CDATA\[|\]\]>$/g, '').trim();
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)))
-    .trim();
+  return NextResponse.json({
+    success: true,
+    digest: {
+      summary: `今日精选 ${articles.length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
+      trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
+      articles,
+      statistics: {
+        totalArticles: articles.length,
+        categoryDistribution: {
+          'ai-ml': 0,
+          'security': 0,
+          'engineering': 0,
+          'tools': 0,
+          'opinion': 0,
+          'other': articles.length,
+        },
+        averageScores: {
+          relevance: 5,
+          quality: 5,
+          timeliness: 5,
+        },
+        topKeywords: [],
+        sourcesAnalyzed: new Set(articles.map(a => a.source)).size,
+      },
+      visualizations: {
+        categoryChart: '',
+        scoreChart: '',
+        tagCloud: [],
+      },
+      generatedAt: new Date().toISOString(),
+    },
+  });
 }
