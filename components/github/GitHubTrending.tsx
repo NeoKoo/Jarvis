@@ -114,10 +114,16 @@ function RepositoryCard({ repository }: { repository: GitHubRepository }) {
 
 export function GitHubTrending() {
   const { repositories, loading, error, fetchTrending, lastUpdated } = useGitHubStore();
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    fetchTrending();
+    // 不再自动加载，等待用户点击
   }, []);
+
+  const handleFetch = () => {
+    setHasFetched(true);
+    fetchTrending();
+  };
 
   const handleRefresh = () => {
     fetchTrending();
@@ -147,7 +153,30 @@ export function GitHubTrending() {
         </Button>
       </div>
 
-      {loading && repositories.length === 0 ? (
+      {!hasFetched && repositories.length === 0 && !loading && !error ? (
+        <Card>
+          <CardContent className="p-12">
+            <div className="text-center space-y-6">
+              <div className="p-4 bg-muted rounded-full w-20 h-20 mx-auto flex items-center justify-center">
+                <GitFork className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">GitHub 热门仓库</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  发现当前最热门的开源项目
+                </p>
+              </div>
+              <Button onClick={handleFetch} size="lg" className="gap-2">
+                <GitFork className="w-5 h-5" />
+                获取热门仓库
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                点击按钮将调用 GitHub API 获取趋势数据
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : loading && repositories.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>

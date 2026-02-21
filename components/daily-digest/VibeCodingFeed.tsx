@@ -61,8 +61,9 @@ interface VibeCodingResponse {
 
 export function VibeCodingFeed() {
   const [digest, setDigest] = useState<VibeCodingDigest | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
   const { toast } = useToast();
 
   const fetchVibeCodingDigest = async (forceRefresh = false) => {
@@ -92,8 +93,13 @@ export function VibeCodingFeed() {
   };
 
   useEffect(() => {
-    fetchVibeCodingDigest();
+    // 不再自动加载，等待用户点击
   }, []);
+
+  const handleFetch = () => {
+    setHasFetched(true);
+    fetchVibeCodingDigest(false);
+  };
 
   const handleRefresh = () => {
     fetchVibeCodingDigest(true);
@@ -129,23 +135,56 @@ export function VibeCodingFeed() {
   }
 
   if (!digest || digest.articles.length === 0) {
-    return (
-      <Card className="backdrop-blur-sm bg-card/50">
-        <CardContent className="p-12">
-          <div className="text-center space-y-4">
-            <Code2 className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">暂无VibeCoding相关内容</p>
-            <p className="text-sm text-muted-foreground">
-              请稍后再试或尝试刷新获取最新内容
-            </p>
-            <Button variant="outline" onClick={handleRefresh}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              刷新
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    // 如果还没有获取过数据，显示获取按钮
+    if (!hasFetched && !loading && !error) {
+      return (
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-12">
+            <div className="text-center space-y-6">
+              <div className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full w-20 h-20 mx-auto flex items-center justify-center">
+                <Cpu className="w-10 h-10 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">VibeCoding 专属推荐</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  获取 AI 辅助编程的最新动态和工具
+                </p>
+              </div>
+              <Button onClick={handleFetch} size="lg" className="gap-2">
+                <Sparkles className="w-5 h-5" />
+                获取 VibeCoding 内容
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                AI 智能筛选 Cursor、Windsurf、Copilot 等工具相关内容
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // 如果已经获取过但没有内容
+    if (hasFetched && digest && digest.articles.length === 0) {
+      return (
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-12">
+            <div className="text-center space-y-4">
+              <Code2 className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">暂无VibeCoding相关内容</p>
+              <p className="text-sm text-muted-foreground">
+                请稍后再试或尝试刷新获取最新内容
+              </p>
+              <Button variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                刷新
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return null;
   }
 
   return (

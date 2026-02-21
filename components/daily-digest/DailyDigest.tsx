@@ -27,9 +27,10 @@ interface DailyDigestResponse {
 
 export function DailyDigest() {
   const [digest, setDigest] = useState<DailyDigestResponse['digest'] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>('');
+  const [hasFetched, setHasFetched] = useState(false);
   const { toast } = useToast();
 
   const fetchDigest = async (forceRefresh = false) => {
@@ -95,8 +96,13 @@ export function DailyDigest() {
   };
 
   useEffect(() => {
-    fetchDigest();
+    // 不再自动加载，等待用户点击
   }, []);
+
+  const handleFetch = () => {
+    setHasFetched(true);
+    fetchDigest(false);
+  };
 
   const handleRefresh = () => {
     fetchDigest(true);
@@ -146,6 +152,31 @@ export function DailyDigest() {
   }
 
   if (!digest) {
+    // 如果还没有获取过数据，显示获取按钮
+    if (!hasFetched && !loading && !error) {
+      return (
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-12">
+            <div className="text-center space-y-6">
+              <Newspaper className="w-16 h-16 mx-auto text-primary opacity-20" />
+              <div>
+                <h3 className="text-xl font-semibold mb-2">每日技术摘要</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  获取今日精选技术文章，AI 智能筛选
+                </p>
+              </div>
+              <Button onClick={handleFetch} size="lg" className="gap-2">
+                <Newspaper className="w-5 h-5" />
+                获取每日摘要
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                点击按钮将调用 API 分析最新技术文章
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
     return null;
   }
 
