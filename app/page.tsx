@@ -8,6 +8,7 @@ import { MessageSquare, Calendar, CheckSquare, Mic, BookOpen, Bell } from 'lucid
 import { Navbar } from '@/components/navbar';
 import { GitHubTrending } from '@/components/github/GitHubTrending';
 import { DailyDigest } from '@/components/daily-digest/DailyDigest';
+import { VibeCodingFeed } from '@/components/daily-digest/VibeCodingFeed';
 
 export default function Home() {
   const [time, setTime] = useState(new Date());
@@ -119,6 +120,13 @@ export default function Home() {
         <Card className="backdrop-blur-sm bg-card/50">
           <CardContent className="p-6">
             <DailyDigest />
+          </CardContent>
+        </Card>
+
+        {/* VibeCoding 专属推荐 */}
+        <Card className="backdrop-blur-sm bg-card/50">
+          <CardContent className="p-6">
+            <VibeCodingFeed />
           </CardContent>
         </Card>
 
