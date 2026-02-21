@@ -7,6 +7,8 @@ export interface GitHubRepository {
   description: string;
   language: string;
   stars: number;
+  forks: number;
+  openIssues: number;
   url: string;
   createdAt: string;
   updatedAt: string;

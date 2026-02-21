@@ -56,6 +56,8 @@ export async function GET(request: Request) {
       description: repo.description || '暂无描述',
       language: repo.language || 'Unknown',
       stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      openIssues: repo.open_issues_count,
       url: repo.html_url,
       createdAt: repo.created_at,
       updatedAt: repo.updated_at,
