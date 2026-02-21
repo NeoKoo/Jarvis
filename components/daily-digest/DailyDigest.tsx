@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Newspaper, ExternalLink, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
+import { Newspaper, ExternalLink, TrendingUp, Loader2, RefreshCw, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { ArticleCard } from './ArticleCard';
 import { DigestVisualizations } from './Visualizations';
+import { DigestSkeleton } from './DigestSkeleton';
 import { DigestArticle, DigestStatistics, DigestVisualization } from '@/types';
 
 interface DailyDigestResponse {
@@ -103,12 +104,14 @@ export function DailyDigest() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      <div className="space-y-6">
         {progress && (
-          <p className="text-sm text-muted-foreground">{progress}</p>
+          <div className="flex items-center justify-center gap-3 py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">{progress}</p>
+          </div>
         )}
-        <p className="text-sm text-muted-foreground">正在生成每日技术摘要...</p>
+        <DigestSkeleton />
       </div>
     );
   }
@@ -117,14 +120,25 @@ export function DailyDigest() {
     return (
       <Card className="border-destructive/50 bg-destructive/5">
         <CardContent className="py-8">
-          <p className="text-center text-destructive mb-4">{error}</p>
-          <div className="flex justify-center gap-3">
-            <Button variant="outline" onClick={() => fetchDigest()}>
-              重试
-            </Button>
-            <Button variant="outline" onClick={handleRefresh}>
-              强制刷新
-            </Button>
+          <div className="text-center space-y-4">
+            <p className="text-destructive">{error}</p>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => fetchDigest()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                重试
+              </Button>
+              <Button variant="outline" onClick={handleRefresh}>
+                强制刷新
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground max-w-md mx-auto p-3 bg-muted/30 rounded">
+              <p className="font-medium mb-1">可能的原因：</p>
+              <ul className="text-left space-y-1">
+                <li>• RSS 源暂时无法访问</li>
+                <li>• AI 服务未配置或超出配额</li>
+                <li>• 网络连接问题</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -259,18 +273,26 @@ export function DailyDigest() {
         <h3 className="font-semibold text-lg mb-3">精选文章</h3>
         {digest.articles && digest.articles.length > 0 ? (
           <div className="space-y-3">
-            {digest.articles.map((article) => (
+            {digest.articles.map((article, index) => (
               <ArticleCard
                 key={article.id}
                 article={article}
-                index={digest.articles.indexOf(article)}
+                index={index}
               />
             ))}
           </div>
         ) : (
           <Card>
-            <CardContent className="p-8">
-              <p className="text-center text-muted-foreground">暂无文章</p>
+            <CardContent className="p-12 text-center">
+              <Newspaper className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-2">暂无符合条件的文章</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                可能是 RSS 源未更新或筛选条件过严格
+              </p>
+              <Button variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                强制刷新获取最新文章
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -287,5 +309,3 @@ export function DailyDigest() {
     </div>
   );
 }
-
-import { BarChart3 } from 'lucide-react';

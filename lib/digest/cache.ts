@@ -3,15 +3,21 @@
  * IndexedDB-based caching layer for processed articles
  */
 
-import { DigestArticle, ArticleCache } from '@/types';
+import { DigestArticle, ArticleCache, DailyDigestResponse } from '@/types';
 
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const FULL_DIGEST_CACHE_KEY = 'full-digest';
+const FULL_DIGEST_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours for full digest
 
 // ============================================================================
 // In-Memory Cache (for faster access during session)
 // ============================================================================
 
 const memoryCache = new Map<string, ArticleCache>();
+let fullDigestCache: {
+  digest: DailyDigestResponse['digest'];
+  cachedAt: Date;
+} | null = null;
 
 /**
  * Get article from cache (memory first, then IndexedDB)
@@ -188,4 +194,48 @@ export function getCacheHitRate(): number {
 
   if (total === 0) return 0;
   return Math.round((totalHits / total) * 1000) / 10; // Return percentage with 1 decimal
+}
+
+// ============================================================================
+// Full Digest Cache (cache complete digest response)
+// ============================================================================
+
+/**
+ * Get cached full digest
+ */
+export function getCachedDigest(): DailyDigestResponse['digest'] | null {
+  if (!fullDigestCache) return null;
+
+  const age = Date.now() - fullDigestCache.cachedAt.getTime();
+  if (age < FULL_DIGEST_CACHE_TTL) {
+    return fullDigestCache.digest;
+  }
+
+  fullDigestCache = null;
+  return null;
+}
+
+/**
+ * Cache full digest response
+ */
+export function setCachedDigest(digest: DailyDigestResponse['digest']): void {
+  fullDigestCache = {
+    digest,
+    cachedAt: new Date(),
+  };
+}
+
+/**
+ * Invalidate full digest cache
+ */
+export function invalidateDigestCache(): void {
+  fullDigestCache = null;
+}
+
+/**
+ * Get digest cache age in minutes
+ */
+export function getDigestCacheAge(): number | null {
+  if (!fullDigestCache) return null;
+  return Math.floor((Date.now() - fullDigestCache.cachedAt.getTime()) / 60000);
 }

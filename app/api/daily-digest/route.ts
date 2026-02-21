@@ -5,7 +5,7 @@ import { DEFAULT_PREFERENCES } from '@/config/digest-preferences';
 import { fetchRSSFeeds } from '@/lib/rss/fetcher';
 import { processArticlesBatch, generateTrends, generateDailySummary } from '@/lib/digest/ai-pipeline';
 import { generateStatistics, generateVisualization } from '@/lib/digest/statistics';
-import { cacheArticles, invalidateOldCache } from '@/lib/digest/cache';
+import { cacheArticles, invalidateOldCache, getCachedDigest, setCachedDigest } from '@/lib/digest/cache';
 import { DailyDigestResponse, DigestArticle, RSSItem } from '@/types';
 
 export async function GET(request: Request) {
@@ -15,6 +15,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const forceRefresh = searchParams.get('refresh') === 'true';
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedDigest = getCachedDigest();
+      if (cachedDigest) {
+        const cacheAge = Math.floor((Date.now() - new Date(cachedDigest.generatedAt).getTime()) / 60000);
+        console.log(`[Digest] ✅ Returning cached digest (${cacheAge} minutes old)`);
+        return NextResponse.json({
+          success: true,
+          digest: cachedDigest,
+        });
+      }
+    }
 
     // 1. Clean old cache
     if (forceRefresh) {
@@ -131,6 +144,9 @@ export async function GET(request: Request) {
       generatedAt: new Date().toISOString(),
     };
 
+    // 11. Cache the full digest
+    setCachedDigest(digest);
+
     const duration = Date.now() - startTime;
     console.log(`[Digest] ✅ Completed in ${duration}ms`);
 
@@ -211,36 +227,41 @@ function createBasicDigest(rawArticles: RSSItem[]): NextResponse {
     processedAt: new Date(),
   }));
 
+  const basicDigest = {
+    summary: `今日精选 ${articles.length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
+    trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
+    articles,
+    statistics: {
+      totalArticles: articles.length,
+      categoryDistribution: {
+        'ai-ml': 0,
+        'security': 0,
+        'engineering': 0,
+        'tools': 0,
+        'opinion': 0,
+        'other': articles.length,
+      },
+      averageScores: {
+        relevance: 5,
+        quality: 5,
+        timeliness: 5,
+      },
+      topKeywords: [],
+      sourcesAnalyzed: new Set(articles.map(a => a.source)).size,
+    },
+    visualizations: {
+      categoryChart: '',
+      scoreChart: '',
+      tagCloud: [],
+    },
+    generatedAt: new Date().toISOString(),
+  };
+
+  // Cache basic digest as well
+  setCachedDigest(basicDigest);
+
   return NextResponse.json({
     success: true,
-    digest: {
-      summary: `今日精选 ${articles.length} 篇最新技术文章，涵盖 AI、工程、安全等领域。`,
-      trends: ['技术持续创新', '工程实践分享', '安全最佳实践'],
-      articles,
-      statistics: {
-        totalArticles: articles.length,
-        categoryDistribution: {
-          'ai-ml': 0,
-          'security': 0,
-          'engineering': 0,
-          'tools': 0,
-          'opinion': 0,
-          'other': articles.length,
-        },
-        averageScores: {
-          relevance: 5,
-          quality: 5,
-          timeliness: 5,
-        },
-        topKeywords: [],
-        sourcesAnalyzed: new Set(articles.map(a => a.source)).size,
-      },
-      visualizations: {
-        categoryChart: '',
-        scoreChart: '',
-        tagCloud: [],
-      },
-      generatedAt: new Date().toISOString(),
-    },
+    digest: basicDigest,
   });
 }
