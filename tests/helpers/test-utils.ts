@@ -57,7 +57,6 @@ export async function clearAllNotes(page: Page): Promise<void> {
         };
 
         request.onerror = () => {
-          db?.close();
           reject(request.error);
         };
 
