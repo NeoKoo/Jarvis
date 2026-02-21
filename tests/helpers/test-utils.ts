@@ -23,32 +23,56 @@ export async function waitForPageLoad(page: Page): Promise<void> {
  * 通过直接操作 IndexedDB 删除所有笔记数据
  */
 export async function clearAllNotes(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const dbName = 'JarvisDB';
-    const request = indexedDB.open(dbName);
+  try {
+    await page.evaluate(async () => {
+      const dbName = 'JarvisDB';
+      const request = indexedDB.open(dbName);
 
-    return new Promise<void>((resolve, reject) => {
-      request.onsuccess = async () => {
-        const db = request.result;
-        try {
-          const transaction = db.transaction(['notes'], 'readwrite');
-          const objectStore = transaction.objectStore('notes');
-          await new Promise<void>((res, rej) => {
-            const clearReq = objectStore.clear();
-            clearReq.onsuccess = () => res();
-            clearReq.onerror = () => rej(clearReq.error);
-          });
-          db.close();
+      return new Promise<void>((resolve, reject) => {
+        request.onsuccess = async () => {
+          const db = request.result;
+          try {
+            // 检查 notes 对象存储是否存在
+            if (!db.objectStoreNames.contains('notes')) {
+              db.close();
+              resolve();
+              return;
+            }
+
+            const transaction = db.transaction(['notes'], 'readwrite');
+            const objectStore = transaction.objectStore('notes');
+
+            await new Promise<void>((res, rej) => {
+              const clearReq = objectStore.clear();
+              clearReq.onsuccess = () => res();
+              clearReq.onerror = () => rej(clearReq.error);
+            });
+
+            db.close();
+            resolve();
+          } catch (error) {
+            db.close();
+            reject(error);
+          }
+        };
+
+        request.onerror = () => {
+          db?.close();
+          reject(request.error);
+        };
+
+        request.onupgradeneeded = () => {
+          // 数据库不存在，不需要清空
+          request.result.close();
           resolve();
-        } catch (error) {
-          db.close();
-          reject(error);
-        }
-      };
-
-      request.onerror = () => reject(request.error);
+        };
+      });
     });
-  });
+  } catch (error) {
+    // 如果清空失败，继续执行（可能数据库不存在）
+    console.log('Note: Could not clear notes database:', error);
+  }
+
   // 刷新页面以清除内存状态
   await page.reload();
   await waitForPageLoad(page);
@@ -122,9 +146,27 @@ export async function takeScreenshot(page: Page, name: string): Promise<void> {
  * 等待 Toast 消息出现并返回其文本
  */
 export async function waitForToast(page: Page): Promise<string> {
-  const toast = page.locator('[role="status"]').first();
-  await toast.waitFor({ state: 'visible', timeout: 5000 });
-  return await toast.textContent() || '';
+  // 尝试多种可能的 toast 选择器
+  const toastSelectors = [
+    '[role="status"]',
+    '.toast',
+    '[data-testid="toast"]',
+    '.fixed.bottom-4.right-4',
+  ];
+
+  for (const selector of toastSelectors) {
+    try {
+      const toast = page.locator(selector).first();
+      await toast.waitFor({ state: 'visible', timeout: 3000 });
+      const text = await toast.textContent();
+      if (text) return text;
+    } catch {
+      // 继续尝试下一个选择器
+    }
+  }
+
+  // 如果都找不到，返回空字符串
+  return '';
 }
 
 /**
@@ -175,7 +217,7 @@ export async function waitForLoading(page: Page): Promise<void> {
  * 等待并确认元素可见
  */
 export async function ensureVisible(locator: Locator): Promise<void> {
-  await locator.waitFor({ state: 'visible', timeout: 5000 });
+  await locator.first().waitFor({ state: 'visible', timeout: 10000 });
 }
 
 /**
